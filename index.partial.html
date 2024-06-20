@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Permeable Pavement Design Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            color: #1E8AFF;
+        }
+
+        p {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        select, input, button {
+            display: block;
+            width: calc(100% - 20px);
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #1E8AFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #005bb5;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .step {
+            margin-top: 20px;
+        }
+
+        .step-header {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .step-header::after {
+            content: "▼";
+            transition: transform 0.3s ease;
+        }
+
+        .step-header.active::after {
+            transform: rotate(180deg);
+        }
+
+        .step-content {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        .equation {
+            color: #888;
+        }
+
+        .item-hints {
+            position: relative;
+            width: calc(100% - 20px);
+        }
+
+        .item-hints .hint-content {
+            position: absolute;
+            background-color: rgba(30, 138, 255, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+            width: 200px;
+            z-index: 10;
+            right: calc(100% + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.9;
+        }
+
+        .item-hints:hover .hint-content {
+            display: block;
+        }
+
+        .item-hints .hint-content::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: -10px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: transparent transparent transparent rgba(30, 138, 255, 0.9);
+            transform: translateY(-50%);
+        }
+
+        .final-output {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Permeable Pavement Design Calculator</h1>
+        <p>Select your Design Method from the Listed Kentucky Municipalities. This is intended for demonstration purposes. Not intended for Engineering Use.</p>
+        <select id="design-method" onchange="showCalculator()">
+            <option value="">Select Method</option>
+            <option value="SD1">SD1</option>
+            <!-- Add other methods here -->
+        </select>
+
+        <div id="sd1-calculator" class="calculator hidden">
+            <h2>SD1 Method</h2>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(1)">Step 1: Determine Site Suitability For Permeable Pavement</div>
+                <div id="step-1" class="step-content active">
+                    <p>Is the measured Infiltration rate less than 2.0 in/hr?</p>
+                    <label>
+                        <input type="checkbox" id="infiltration-yes" onchange="checkInfiltration(this)">
+                        Yes
+                    </label>
+                    <label>
+                        <input type="checkbox" id="infiltration-no" onchange="checkInfiltration(this)">
+                        No
+                    </label>
+                    <p id="infiltration-result"></p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(2)">Step 2a: Compute Volumetric Runoff Coefficient</div>
+                <div id="step-2a" class="step-content">
+                    <label for="site-area" class="item-hints">Site Area (acres):
+                        <input type="number" id="site-area">
+                        <div class="hint-content">The total area of the site in acres.</div>
+                    </label>
+                    <label for="impervious-area" class="item-hints">Impervious Area (acres):
+                        <input type="number" id="impervious-area">
+                        <div class="hint-content">The area of the site covered by impervious surfaces in acres.</div>
+                    </label>
+                    <button onclick="computeRunoffCoefficient()">Calculate</button>
+                    <p>Percent Imperviousness: <span id="percent-impervious"></span></p>
+                    <p>R<sub>v</sub>: <span id="rv-value"></span></p>
+                    <p class="equation">R<sub>v</sub> = 0.009 * Percent Imperviousness + 0.5</p>
+                    <p class="equation">R<sub>v</sub> = 0.009 * <span id="percent-impervious-value"></span> + 0.5</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(3)">Step 2b: Compute Water Quality Design Volume</div>
+                <div id="step-2b" class="step-content">
+                    <label for="storm-depth" class="item-hints">Design Storm Depth (inches):
+                        <input type="number" id="storm-depth">
+                        <div class="hint-content">The depth of the design storm in inches.</div>
+                    </label>
+                    <label for="drainage-area" class="item-hints">BMP Drainage Area (acres):
+                        <input type="number" id="drainage-area">
+                        <div class="hint-content">The drainage area for the BMP in acres.</div>
+                    </label>
+                    <button onclick="computeWaterQualityVolume()">Calculate</button>
+                    <p>Water Quality Design Volume (Acre-ft): <span id="wq-volume"></span></p>
+                    <p class="equation">V<sub>wq</sub> = 3630 * R<sub>v</sub> * Storm Depth * Drainage Area</p>
+                    <p class="equation">V<sub>wq</sub> = 3630 * <span id="rv-value-equation"></span> * <span id="storm-depth-value"></span> * <span id="drainage-area-value"></span></p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(4)">Step 3: Determine the Design Infiltration Rate</div>
+                <div id="step-3" class="step-content">
+                    <label for="k-measured" class="item-hints">Measured Infiltration Rate (in/hr):
+                        <input type="number" id="k-measured">
+                        <div class="hint-content">The measured infiltration rate in inches per hour.</div>
+                    </label>
+                    <button onclick="computeDesignInfiltrationRate()">Calculate</button>
+                    <p>k<sub>native</sub>: <span id="k-native"></span></p>
+                    <p class="equation">k<sub>native</sub> = 0.25 * k<sub>measured</sub></p>
+                    <p class="equation">k<sub>native</sub> = 0.25 * <span id="k-measured-value"></span></p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(5)">Step 4: Determine the 48-Hour Effective Depth</div>
+                <div id="step-4" class="step-content">
+                    <p>d<sub>48</sub>: <span id="d-48"></span></p>
+                    <p class="equation">d<sub>48</sub> = (48 / 12) * k<sub>native</sub></p>
+                    <p class="equation">d<sub>48</sub> = (48 / 12) * <span id="k-native-value"></span></p>
+                    <button onclick="proceedToStep5()">Proceed to Next Step</button>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(6)">Step 5: Determine the Aggregate Reservoir Depth</div>
+                <div id="step-5" class="step-content">
+                    <label for="porosity" class="item-hints">Porosity of Aggregate Reservoir (use 0.32 if unknown):
+                        <input type="number" id="porosity" value="0.32">
+                        <div class="hint-content">The porosity of the aggregate reservoir.</div>
+                    </label>
+                    <button onclick="computeAggregateReservoirDepth()">Calculate</button>
+                    <p>d<sub>r</sub>: <span id="d-r"></span></p>
+                    <p class="equation">d<sub>r</sub> = d<sub>48</sub> / Porosity</p>
+                    <p class="equation">d<sub>r</sub> = <span id="d-48-value"></span> / <span id="porosity-value"></span></p>
+                    <p id="warning" style="color:red; display:none;">Warning: d<sub>r</sub> should be less than or equal to d<sub>48</sub>.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(7)">Step 6: Calculate The Required Infiltrating Area</div>
+                <div id="step-6" class="step-content">
+                    <p>A<sub>inf</sub>: <span id="a-inf"></span></p>
+                    <p class="equation">A<sub>inf</sub> = V<sub>wq</sub> / (Porosity * d<sub>r</sub>)</p>
+                    <p class="equation">A<sub>inf</sub> = <span id="vwq-value"></span> / (<span id="porosity-value-2"></span> * <span id="dr-value"></span>)</p>
+                    <p id="inf-area-message"></p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(8)">Step 7: Flow Capacity of Underdrain</div>
+                <div id="step-7" class="step-content">
+                    <p>Q<sub>und</sub>: <span id="q-und"></span></p>
+                    <p class="equation">Q<sub>und</sub> = f<sub>s</sub> * (k<sub>media</sub> * A / (12 * 3000))</p>
+                    <p class="equation">Q<sub>und</sub> = 3 * (2 * <span id="a-inf-value"></span> / (12 * 3000))</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-header" onclick="toggleStep(9)">Step 8: Number Of Underdrain Pipes</div>
+                <div id="step-8" class="step-content">
+                    <label for="manning-roughness" class="item-hints">Manning's Roughness Value:
+                        <input type="number" id="manning-roughness" value="0.011">
+                        <div class="hint-content">Use 0.011 for smooth pipe, 0.016 for other.</div>
+                    </label>
+                    <label for="pipe-slope" class="item-hints">Pipe Slope (ft/ft):
+                        <input type="number" id="pipe-slope" value="0.005">
+                        <div class="hint-content">Recommended value is 0.005 ft/ft.</div>
+                    </label>
+                    <button onclick="computeNumberOfUnderdrainPipes()">Calculate</button>
+                    <p>D<sub>s</sub>: <span id="d-s"></span></p>
+                    <p class="equation">D<sub>s</sub> = 16 * ((Q<sub>und</sub> * n) / s<sup>0.5</sup>)<sup>3/8</sup></p>
+                    <p class="equation">D<sub>s</sub> = 16 * ((<span id="qund-value"></span> * <span id="n-value"></span>) / <span id="s-value"></span><sup>0.5</sup>)<sup>3/8</sup></p>
+                    <p id="pipe-message"></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="final-output" class="final-output hidden">
+            <h2>Permeable Concrete Design</h2>
+            <p>This local developer will install permeable concrete that meets the following design criteria:</p>
+            <ul>
+                <li>Facility drainage area: 1 acre; 70 percent impervious area</li>
+                <li>Facility surface area: 3,950 ft²</li>
+                <li>Underdrain: (1) 8 in or (2) 6 in smooth pipes to be installed the entire length of the system</li>
+                <li>Depth of gravel layer below invert of underdrain pipe: 0.781 ft = 9.4 in</li>
+            </ul>
+            <p>NOTE: Per the permeable pavement fact sheet: “in areas where poor permeability precludes infiltration, the underdrain should be placed at the bottom of the reservoir layer and this layer may be decreased to one foot in thickness.”</p>
+        </div>
+    </div>
+
+    <script>
+        function showCalculator() {
+            const method = document.getElementById('design-method').value;
+            if (method === 'SD1') {
+                document.getElementById('sd1-calculator').classList.remove('hidden');
+            } else {
+                document.getElementById('sd1-calculator').classList.add('hidden');
+            }
+        }
+
+        function toggleStep(stepNumber) {
+            const stepContent = document.querySelector(`.step:nth-child(${stepNumber + 1}) .step-content`);
+            const stepHeader = document.querySelector(`.step:nth-child(${stepNumber + 1}) .step-header`);
+            if (stepContent) {
+                stepContent.classList.toggle('active');
+                stepHeader.classList.toggle('active');
+            }
+        }
+
+        function checkInfiltration(element) {
+            const result = document.getElementById('infiltration-result');
+            if (element.id === 'infiltration-yes') {
+                result.textContent = 'Great! Proceed to the Next Step.';
+                document.getElementById('step-2a').classList.add('active');
+            } else {
+                result.textContent = 'Your site is not suitable for Permeable Pavement; please select a new BMP.';
+            }
+        }
+
+        function computeRunoffCoefficient() {
+            const siteArea = parseFloat(document.getElementById('site-area').value);
+            const imperviousArea = parseFloat(document.getElementById('impervious-area').value);
+            const percentImpervious = (imperviousArea / siteArea) * 100;
+            const rv = 0.009 * percentImpervious + 0.05;
+            document.getElementById('percent-impervious').textContent = percentImpervious.toFixed(2) + '%';
+            document.getElementById('percent-impervious-value').textContent = percentImpervious.toFixed(2);
+            document.getElementById('rv-value').textContent = rv.toFixed(2);
+            document.getElementById('rv-value-equation').textContent = rv.toFixed(2);
+            document.getElementById('step-2b').classList.add('active');
+        }
+
+        function computeWaterQualityVolume() {
+            const rv = parseFloat(document.getElementById('rv-value').textContent);
+            const stormDepth = parseFloat(document.getElementById('storm-depth').value);
+            const drainageArea = parseFloat(document.getElementById('drainage-area').value);
+            const wqVolume = 3630 * rv * stormDepth * drainageArea;
+            document.getElementById('wq-volume').textContent = wqVolume.toFixed(2);
+            document.getElementById('storm-depth-value').textContent = stormDepth.toFixed(2);
+            document.getElementById('drainage-area-value').textContent = drainageArea.toFixed(2);
+            document.getElementById('vwq-value').textContent = wqVolume.toFixed(2);
+            document.getElementById('step-3').classList.add('active');
+        }
+
+        function computeDesignInfiltrationRate() {
+            const kMeasured = parseFloat(document.getElementById('k-measured').value);
+            const kNative = 0.25 * kMeasured;
+            document.getElementById('k-native').textContent = kNative.toFixed(2);
+            document.getElementById('k-measured-value').textContent = kMeasured.toFixed(2);
+            document.getElementById('k-native-value').textContent = kNative.toFixed(2);
+            document.getElementById('d-48').textContent = (48 / 12 * kNative).toFixed(2);
+            document.getElementById('d-48-value').textContent = (48 / 12 * kNative).toFixed(2);
+            document.getElementById('step-4').classList.add('active');
+        }
+
+        function proceedToStep5() {
+            document.getElementById('step-5').classList.add('active');
+        }
+
+        function computeAggregateReservoirDepth() {
+            const d48 = parseFloat(document.getElementById('d-48').textContent);
+            const porosity = parseFloat(document.getElementById('porosity').value);
+            const dr = d48 / porosity;
+            document.getElementById('d-r').textContent = dr.toFixed(2);
+            document.getElementById('porosity-value').textContent = porosity.toFixed(2);
+            document.getElementById('dr-value').textContent = dr.toFixed(2);
+            if (dr > d48) {
+                document.getElementById('warning').style.display = 'block';
+            } else {
+                document.getElementById('warning').style.display = 'none';
+            }
+            document.getElementById('step-6').classList.add('active');
+            computeRequiredInfiltratingArea();
+        }
+
+        function computeRequiredInfiltratingArea() {
+            const wqVolume = parseFloat(document.getElementById('wq-volume').textContent);
+            const porosity = parseFloat(document.getElementById('porosity').value);
+            const dr = parseFloat(document.getElementById('d-r').textContent);
+            const aInf = (wqVolume / (porosity * dr)).toFixed(2);
+            document.getElementById('a-inf').textContent = aInf;
+            document.getElementById('porosity-value-2').textContent = porosity.toFixed(2);
+            document.getElementById('a-inf-value').textContent = aInf;
+            const plannedArea = 3950; // Example value
+            if (aInf < plannedArea) {
+                document.getElementById('inf-area-message').textContent = 'The drainage area may be increased. Repeat steps 2 and 6.';
+            } else {
+                document.getElementById('inf-area-message').textContent = 'The drainage area must be decreased.';
+            }
+            document.getElementById('step-7').classList.add('active');
+            computeFlowCapacityOfUnderdrain();
+        }
+
+        function computeFlowCapacityOfUnderdrain() {
+            const fS = 3;
+            const kMedia = 2;
+            const a = parseFloat(document.getElementById('a-inf').textContent);
+            const qUnd = ((fS * kMedia * a) / (12 * 3000)).toFixed(2);
+            document.getElementById('q-und').textContent = qUnd;
+            document.getElementById('qund-value').textContent = qUnd;
+            document.getElementById('step-8').classList.add('active');
+            computeNumberOfUnderdrainPipes();
+        }
+
+        function computeNumberOfUnderdrainPipes() {
+            const qUnd = parseFloat(document.getElementById('q-und').textContent);
+            const manningRoughness = parseFloat(document.getElementById('manning-roughness').value);
+            const pipeSlope = parseFloat(document.getElementById('pipe-slope').value);
+            const dS = (16 * Math.pow((qUnd * manningRoughness) / Math.sqrt(pipeSlope), 3 / 8)).toFixed(2);
+            document.getElementById('d-s').textContent = dS;
+            document.getElementById('n-value').textContent = manningRoughness.toFixed(3);
+            document.getElementById('s-value').textContent = pipeSlope.toFixed(3);
+            if (dS > 6) {
+                document.getElementById('pipe-message').textContent = 'Use 1 8-inch underdrain or try 2 underdrains.';
+            } else {
+                document.getElementById('pipe-message').textContent = 'Use 2, 6-inch underdrains.';
+            }
+            document.getElementById('final-output').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
